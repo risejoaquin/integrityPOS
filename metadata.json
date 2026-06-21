@@ -1,0 +1,6 @@
+{
+  "name": "IntegrityPOS by SolidBit",
+  "description": "Local-First POS System with BOM",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
