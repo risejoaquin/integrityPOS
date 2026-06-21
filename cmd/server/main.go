@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"integritypos/internal/api"
+	"integritypos/internal/events"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -45,13 +46,18 @@ func main() {
 	}
 	log.Println("INFO: Successfully connected to PostgreSQL")
 
+	broker := events.NewBroker()
+	go broker.Start()
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))
 	})
 	mux.HandleFunc("/", api.HandlePOS)
-	mux.HandleFunc("POST /api/checkout", api.HandleCheckout(dbPool))
+	mux.HandleFunc("/kds", api.HandleKDS)
+	mux.HandleFunc("/api/kds/stream", api.HandleKDSStream(broker))
+	mux.HandleFunc("POST /api/checkout", api.HandleCheckout(dbPool, broker))
 
 	srv := &http.Server{
 		Addr:    ":" + port,

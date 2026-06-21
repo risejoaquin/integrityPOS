@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="es" class="bg-black text-amber-500 font-mono">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>INTEGRITY POS // KDS MONITOR</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Courier New', Courier, monospace; }
+        .kds-container {
+            border: 4px solid #d97706; /* amber-600 */
+            background-color: #451a03; /* amber-950 */
+            box-shadow: 0 0 15px rgba(217, 119, 6, 0.2);
+        }
+    </style>
+</head>
+<body class="h-screen w-screen overflow-hidden flex flex-col bg-black">
+    <!-- HEADER -->
+    <header class="border-b-4 border-amber-600 p-4 flex justify-between items-center bg-gray-900">
+        <div>
+            <h1 class="text-3xl font-bold tracking-widest text-amber-500">PRODUCTION<span class="text-gray-500">_KDS</span></h1>
+            <div class="text-sm font-bold mt-1 text-amber-700" id="conn-status">SYS.STS: CONNECTING...</div>
+        </div>
+        <div class="text-right">
+            <div class="text-3xl font-bold text-amber-400" id="clock">00:00:00</div>
+            <div class="text-sm text-amber-700">ZONE: ASSEMBLY_01</div>
+        </div>
+    </header>
+
+    <!-- MAIN GRID -->
+    <main class="flex-1 p-6 overflow-y-auto">
+        <div id="kds-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <!-- Order tickets injected here -->
+        </div>
+    </main>
+
+    <script>
+        // Clock
+        setInterval(() => {
+            document.getElementById('clock').textContent = new Date().toLocaleTimeString('en-US', { hour12: false });
+        }, 1000);
+
+        const grid = document.getElementById('kds-grid');
+        const status = document.getElementById('conn-status');
+
+        const sse = new EventSource('/api/kds/stream');
+
+        sse.onopen = () => {
+            status.textContent = 'SYS.STS: ONLINE [SSE_LIVE]';
+            status.className = 'text-sm font-bold mt-1 text-green-500';
+        };
+
+        sse.onerror = () => {
+            status.textContent = 'SYS.STS: CONNECTION_LOST! RETRYING...';
+            status.className = 'text-sm font-bold mt-1 text-red-500';
+        };
+
+        sse.onmessage = (e) => {
+            const items = JSON.parse(e.data);
+            
+            const card = document.createElement('div');
+            card.className = "kds-container p-4 flex flex-col";
+            
+            const orderId = Math.floor(1000 + Math.random() * 9000);
+            const timeStr = new Date().toLocaleTimeString('en-US', { hour12: false });
+            
+            let html = `
+                <div class="border-b-2 border-amber-600 pb-2 mb-3 flex justify-between items-center">
+                    <span class="text-2xl font-bold text-white">ORD #${orderId}</span>
+                    <span class="text-amber-500">${timeStr}</span>
+                </div>
+                <div class="flex-1 text-xl flex flex-col gap-2">
+            `;
+            
+            items.forEach(item => {
+                html += `
+                    <div class="flex items-start">
+                        <span class="font-bold text-amber-300 w-12">${item.quantity}x</span>
+                        <span class="flex-1 text-white truncate">PRD #${item.product_id}</span>
+                    </div>
+                `;
+            });
+            
+            html += `</div>`;
+            card.innerHTML = html;
+            
+            // Prepend new order
+            grid.insertBefore(card, grid.firstChild);
+        };
+    </script>
+</body>
+</html>
