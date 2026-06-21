@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 
+	"integritypos/internal/hardware"
 	"integritypos/internal/models"
 	"integritypos/internal/pos"
 
@@ -62,6 +63,17 @@ func HandleCheckout(db *pgxpool.Pool) http.HandlerFunc {
 			w.WriteHeader(http.StatusInternalServerError)
 			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 			return
+		}
+
+		var total float64
+		for _, item := range items {
+			total += item.Subtotal
+		}
+
+		// Enviar ticket físico (falla de impresión no aborta transacción)
+		// Utilizamos orderID = 0 ya que ProcessOrder actualmente no lo retorna, en un flujo completo lo retornaríamos.
+		if err := hardware.PrintTicket(items, total, 0); err != nil {
+			log.Printf("ERROR: Hardware printer failed for order: %v", err)
 		}
 
 		log.Printf("INFO: Order processed successfully with %d items", len(items))
