@@ -10,6 +10,8 @@ import (
 	"syscall"
 	"time"
 
+	"integritypos/internal/api"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -48,6 +50,8 @@ func main() {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))
 	})
+	mux.HandleFunc("/", api.HandlePOS)
+	mux.HandleFunc("POST /api/checkout", api.HandleCheckout(dbPool))
 
 	srv := &http.Server{
 		Addr:    ":" + port,
